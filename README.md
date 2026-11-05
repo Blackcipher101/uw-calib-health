@@ -44,6 +44,10 @@ Rays are rotated into a baseline-aligned frame (x' = X/Z, y' = Y/Z, left ray). T
 (mocap) while the motion is mostly horizontal, so a pressure-referenced scale constrains almost nothing. IMU method (b) not tried.
 
 ## Observability argument and what the data say
+
+![Vertical disparity field of real matches](docs/figures/fig4_vertical_disparity.png)
+
+*Figure 4. Median vertical disparity (px) of the tracked left-right matches in rectified left-ray coordinates, NTNU underwater 2023 traj_06, 105-165 s (bins with >= 30 matches). Left: the given in-water calibration. Middle / right: the same matches with +0.3 deg injected about x (adds a nearly constant dy) and about z (adds a gradient in x'); these two panels are calibration-side injections, shown only to illustrate the basis functions.*
 The brief assumes w_y is invisible to a single stereo pair. In theory it is only *weakly* visible: through the x'y' term of the
 epipolar field (and its twin, translation-direction t_z, which we do not estimate). With NTNU's wide fisheye (|x'|,|y'| up to 0.6) the
 term is large enough to be measured: static epipolar w_y has bootstrap SE 0.017 deg on 60 s, the motion method 0.058 deg (0.04-0.14 depending on
@@ -99,6 +103,10 @@ Shift of the fused estimate relative to the unwarped stretch vs injected w (deg)
 y: +0.3 -> +0.233 / +0.227; -0.3 -> -0.345 / -0.341; +0.1 -> +0.062 / +0.050; air case (-0.275) -> -0.332 / -0.341. y shift is also -0.05..-0.08 for
 x and z injections, i.e. a nearly constant offset introduced by the warp (suspected resampling blur/interpolation mismatch between left and right; not
 investigated), so the y *slope* is ~0.95-1.0 and the offset ~-0.06 deg (0.5 px). Detection of the real air-extrinsic change (differential verdict) = RECALIBRATE on both stretches.
+
+![Image-level injection: injected vs estimated rotation per axis](docs/figures/fig1_warp_accuracy.png)
+
+*Figure 1. Experiment B on NTNU underwater 2023 traj_06 (stretches 105 and 170 s): estimated shift vs injected rotation per axis (all 12 runs of `results/warp_study.json`). Open red markers are runs where a different axis was injected: they show the leakage (x, z) and the constant ~-0.06 deg offset (y). The calibration-side injection (Experiment A) is equivariant by construction and is deliberately not plotted.*
 Per-method y shift in the warp study: static epi and motion agree within 0.03-0.2 deg (motion is noisier, e.g. x+0.3 on 170: +0.144).
 
 ### Experiment C: window length (`window_study.py`, `summarize_window.py`), injection of 0, y+-0.1, y+-0.3, x+0.2, z+0.2; windows of the 3 eval stretches
@@ -114,6 +122,10 @@ Repeatability of the unperturbed estimate across disjoint windows:
 (diff-mode reference here = mean zero-injection estimate of all windows of that length, i.e. NOT independent; y sd at 60 s is from only 3 stretches.)
 Practical resolution on this rig: x < 0.01 deg, z ~0.01 deg, y ~0.03 deg (30 s) to 0.09 deg (10 s) repeatability; w_y changes of >= 0.1 deg are detectable only from >= 60 s,
 >= 0.3 deg from 10 s.
+
+![Repeatability vs window length](docs/figures/fig2_window_repeatability.png)
+
+*Figure 2. Experiment C on NTNU underwater 2023 traj_06: zero-injection estimates per disjoint window (left) and their sd per axis (right) against the verdict thresholds on |w_y| (0.079 deg CHECK, 0.21 deg RECALIBRATE; the thresholds for x and z are 0.09 / 0.19 deg). The 60 s point rests on 3 stretches only.*
 
 ### Experiment D: bus_outside, given calibration, radtan 1600x1200, B = 0.2318 m, f = 1167 px (`run_bus.py`; no GT for the true error)
 | stretch | matches / mono feats / pairs | w_x | w_y fused (epi) | 90 % CI y | motion y (SE) | RMS dy | verdict |
@@ -150,6 +162,7 @@ $PY baseline.py --boot 30 | tee results/results_baseline.log   # experiment A (~
 $PY warp_study.py 105,170                  # experiment B (~3 min)
 $PY window_study.py && $PY summarize_window.py   # experiment C
 $PY run_bus.py 100,250,400 60              # experiment D
+$PY make_figures.py --cache cache          # regenerate docs/figures/*.png (fig4 needs cache/ntnu_105_60_k6g6.npz and UWB_DATA)
 $PY validate_gt.py 40 60                   # mocap-scale oracle (not part of the tool)
 python3 -m pytest -q tests                 # synthetic tests, 13 tests, ~1.5 s, no bag needed
 ```
@@ -180,3 +193,7 @@ calibration residual, and the mocap oracle is wrong too. Conclusion for the prod
 DIFFERENTIAL mode (compare against a reference recorded with a known-good calibration on the same rig), where
 it detected every >= 0.2 deg change with 0 false alarms at >= 20 s windows; do not trust its absolute w_y.
 The VIO sensitivity itself is a useful number: 0.1 deg of stereo rotation error costs ~8-27 % ATE here.
+
+![VIO validation of the absolute reading](docs/figures/fig3_vio_validation.png)
+
+*Figure 3. uw_ct_vio (h05) mean ATE over the 6 NTNU underwater 2023 trajectories for each stereo extrinsic; dots are the individual trajectories (traj_01..06), means as in the table above.*
